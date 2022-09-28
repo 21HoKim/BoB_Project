@@ -1,0 +1,6 @@
+*.o
+*.stash
+*.user
+pcap-test
+*.sh
+*.pcap

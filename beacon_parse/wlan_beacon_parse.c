@@ -1,6 +1,7 @@
 #include <pcap.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MAC_ADDR_LEN 6
 
@@ -12,7 +13,7 @@
 /*
     Radiotap Header
 */
-struct radiotap_hdr
+typedef struct radiotap_hdr
 {
     u_char hdr_rev;        // Header revision
     u_char hdr_pad;        // Header Header pad
@@ -26,129 +27,170 @@ struct radiotap_hdr
     u_char ant_signal;     // Antenna signal
     u_char ant_noise;      // Antenna noise
     u_char ant;            // Antenna
-};
+} Radio;
 
 /*
     802.11 Beacon frame header
 */
-struct wlan_Beacon_hdr
+typedef struct wlan_Beacon_hdr
 {
-    u_char type;                    //Type/Subtype
-    u_short cnt_field;              //Frame Control Field
-    u_char mac_dhost[MAC_ADDR_LEN]; //Destination address
-    u_char mac_shost[MAC_ADDR_LEN]; //Source address
-    uint8_t mac_bssid[MAC_ADDR_LEN];//BSS Id
-    u_char Frag_num : 4;            //Fragment number
-    u_int Seq_num : 12;             //Sequence number
-};
+    // u_char type;                    //Type/Subtype
+    u_short type;                    // Frame Control Field, [1000 ....] : subtype-8, [.... 00..] : Management frame, [.... ..00] : version
+    u_short Dur;                     // Duration
+    u_char mac_dhost[MAC_ADDR_LEN];  // Destination address
+    u_char mac_shost[MAC_ADDR_LEN];  // Source address
+    uint8_t mac_bssid[MAC_ADDR_LEN]; // BSS Id
+    u_char Frag_num : 4;             // Fragment number
+    u_int Seq_num : 12;              // Sequence number
+} BeaconHd;
 
 /*
     802.11 Beacon frame Body
 */
-struct wlan_Beacon_body
+typedef struct wlan_Beacon_body
 {
-    /*Fixed parameters*/
-    uint64_t time;           //Timestamp
-    u_short Be_interval;     //Beacon Interval
-    u_short Cap_inf;         //Capabilities Information
+    u_char tag_number;
+    u_char tag_length;
+} BeaconBd;
 
-    /*Tagged parameters*/
-    //Tag : SSID parameter set
-    u_char tag_num;          //Tag Number
-    u_char tag_len;          //Tag length
-    u_char ssid[10];         //SSID
-    //Tag : Supported Rates
-    u_char sup_rat[10];
-    //Tag : DS Parameter set
-    u_char DS_parset[3];
-    //Tag : Traffic Indication Map
-    u_char TIM[6];
-    //Tag : Channel Switch Announcement Mode
-    u_char tag_num_ch;       //Tag Number : Channel Switch Announcdment
-    u_char tag_len_ch;       //Tag length
-    u_char ch_switch_mode;   //Channel Switch Mode
-    u_char New_ch_num;       //New Channel Number
-    u_char ch_switch_cnt;    //Channel Switch Count
-    //Tag : Country Information
-    u_char country_ifm[8];
-    //Tag : Extended Supported Rates
-    u_char tag_num_esr;      //Tag Number : Extended Supported Rates
-    u_char tag_len_esr;      //Tag length
-    u_char esr[4];           //Extended Supported Rates
-    //Tag : Vendor Specific : Espressif Inc.
-    u_char vse[11];
-    //Tag : RSN Information
-    u_char RSN[26];
-    //Tag : Vendor Specific : Microsoft Corp
-    u_char vsm[28];
-};
-
-
-void usage() {
-	printf("syntax: pcap-test <interface>\n");
-	printf("sample: pcap-test wlan0\n");
+void usage()
+{
+    printf("syntax: pcap-test <interface>\n");
+    printf("sample: pcap-test wlan0\n");
 }
 
-typedef struct {
-	char* dev_;
+typedef struct
+{
+    char *dev_;
 } Param;
 
-Param param  = {
-	.dev_ = NULL
-};
+Param param = {
+    .dev_ = NULL};
 
-bool parse(Param* param, int argc, char* argv[]) {
-	if (argc != 2) {
-		usage();
-		return false;
-	}
-	param->dev_ = argv[1];
-	return true;
+bool parse(Param *param, int argc, char *argv[])
+{
+    if (argc != 2)
+    {
+        usage();
+        return false;
+    }
+    param->dev_ = argv[1];
+    return true;
 }
 
-int main(int argc, char* argv[]) {
-	if (!parse(&param, argc, argv))
-		return -1;
+bool PtRadio(const u_char *packet);
+void PtSmac(const u_char *packet);
+void PtSsid(const u_char *packet);
+void PtCh(const u_char *packet);
 
-	char errbuf[PCAP_ERRBUF_SIZE];
-	pcap_t* pcap = pcap_open_live(param.dev_, BUFSIZ, 1, 1000, errbuf);
-	if (pcap == NULL) {
-		fprintf(stderr, "pcap_open_live(%s) return null - %s\n", param.dev_, errbuf);
-		return -1;
-	}
+int main(int argc, char *argv[])
+{
+    if (!parse(&param, argc, argv))
+        return -1;
 
-	while (true) {
-		struct pcap_pkthdr* header;
-		const u_char* packet;
-		int res = pcap_next_ex(pcap, &header, &packet);
-		if (res == 0) continue;
-		if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK) {
-			printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
-			break;
-		}
-		printf("%u bytes captured\n", header->caplen);
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t *pcap = pcap_open_live(param.dev_, BUFSIZ, 1, 1000, errbuf);
+    if (pcap == NULL)
+    {
+        fprintf(stderr, "pcap_open_live(%s) return null - %s\n", param.dev_, errbuf);
+        return -1;
+    }
+    unsigned int total_tag_len;
+    while (true)
+    {
+        struct pcap_pkthdr *header;
+        const u_char *packet;
+        int res = pcap_next_ex(pcap, &header, &packet);
+        if (res == 0)
+            continue;
+        if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK)
+        {
+            printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
+            break;
+        }
+        printf("==========[bytes captured]==========\n%u bytes captured\n", header->caplen);
+        Radio *rad;
+        rad = (Radio *)packet;
+        // printf("rev : 0x%x\n",rad->hdr_rev);
+        // printf("pad : 0x%x\n",rad->hdr_pad);
+        total_tag_len = header->caplen - rad->hdr_len - 24 - 12; // tag길이
+        // printf("tag_len : %d\n",tag_len);break;
+        bool isBeacon = PtRadio(packet); //여기서 type를 검사하고 Beacon이면 출력함
+        if (isBeacon)
+        {
+            packet += rad->hdr_len; // radio 헤더길이만큼 이동->Beacon hdr로 이동
+            PtSmac(packet);
+            packet += 24; // Beacon body로 이동
+            packet += 12; // 고정길이 이동
+        }
+        // printf("[0x%x]\n",*packet);break;
+        //여기서 부터 가변길이 태그
+        BeaconBd *becB;
+        for (int i = 0; i < total_tag_len;)
+        {
+            becB = (BeaconBd *)(packet + i);
+            // printf("tag_num:%d, tag_len:%d\n",becB->tag_number,becB->tag_length);break;
 
-        printf("Parsing....");
+            // printf("[tag_tpye : %d] [tag_length : %d]\n",becB->tag_number,becB->tag_length);
+            // printf("i:%d\n",i);
+            // printf("tag num : %d\n",becB->tag_number);
+            if (becB->tag_number == 0) // ssid
+            {
+                // packet++; //여기서부터 길이
+                PtSsid(packet+i);
+            }
+            if(becB->tag_number == 3){ // Dskl Parameter
+                PtCh(packet+i);
+            }
+            i += becB->tag_length + 2;
+            // u_char tag = (u_char*)malloc(sizeof(u_char)*);
+        }
+    }
 
-        const struct radiotap_hdr *frame;
-        const struct wlan_Beacon_hdr *beacon_hdr;
-        const struct wlan_Beacon_body * beacon_body;
-        
-        frame = (struct radiotap_hdr*)(packet);
-        printf("Radiotap Header Length : 0x%x\n", frame->hdr_len);
+    pcap_close(pcap);
+}
+bool PtRadio(const u_char *packet)
+{
+    Radio *rad;
+    rad = (Radio *)packet;
+    BeaconHd *bec;
+    bec = (BeaconHd *)(packet + rad->hdr_len);
+    // printf("type : %x\n",htons(bec->type));
+    if (htons(bec->type) == 0x8000)
+    {
+        printf("[radio len : %d]\n", rad->hdr_len);
+    }
+    return true;
+}
+void PtSmac(const u_char *packet)
+{
+    BeaconHd *becH;
+    becH = (BeaconHd *)packet;
+    printf("[Smac : %x:%x:%x:%x:%x:%x]\n", becH->mac_shost[0], becH->mac_shost[1], becH->mac_shost[2], becH->mac_shost[3], becH->mac_shost[4], becH->mac_shost[5]);
+}
+void PtSsid(const u_char *packet)
+{
+    BeaconBd *becB;
+    becB = (BeaconBd *)(packet);
 
-        // printf("Destination Mac : %s",beacon_hdr->mac_dhost);
-        // printf("Source Mac : %s",beacon_hdr->mac_shost);
+    // u_char* tag = (u_char*)malloc(sizeof(u_char)*((becB->tag_length)+2));
+    // printf("tag_lenth : %d\n",becB->tag_length);
+    printf("[SSID : ");
+    for (int i = 2; i < becB->tag_length + 2; i++)
+    {
+        // tag[i]=*(packet+i);
+        printf("%c", *(packet + i)); //타입과 길이 두개를 넘어서 데이터
+    }
+    printf("]\n");
+    // printf("\n");
+    // tag[becB->tag_length+2]='\0';
+    // printf("SSID : %s\n",tag);
 
-        // wlan_frame = (struct wlan_auth_frame*)(packet+frame->hdr_len);
-        // printf("Frame Control : 0x%x\n", wlan_frame->auth_hdr.frame_control);
-        // printf("Duration ID : 0x%x\n", wlan_frame->auth_hdr.duration_ID);
-        // printf("Sequence Control : 0x%x\n", wlan_frame->auth_hdr.sequence_control);
-
-        // printf("Auth Algorithm : 0x%x\n", wlan_frame->auth_body.auth_algorithm_num);
-        // printf("Auth SEQ : 0x%x\n", wlan_frame->auth_body.auth_seq);
-        // printf("Status Code : 0x%x\n", wlan_frame->auth_body.status_code);
-	}
-
-	pcap_close(pcap);
+    // free(tag);
+}
+void PtCh(const u_char *packet)
+{
+    BeaconBd *becB;
+    becB = (BeaconBd *)(packet);
+    printf("[Ch : %d]\n",*(packet+2));
 }

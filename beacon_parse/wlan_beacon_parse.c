@@ -96,8 +96,10 @@ int main(int argc, char *argv[])
         return -1;
     }
     unsigned int total_tag_len;
+    unsigned int count =0;
     while (true)
     {
+        count++;
         struct pcap_pkthdr *header;
         const u_char *packet;
         int res = pcap_next_ex(pcap, &header, &packet);
@@ -108,7 +110,7 @@ int main(int argc, char *argv[])
             printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
             break;
         }
-        printf("==========[bytes captured]==========\n%u bytes captured\n", header->caplen);
+        printf("==========[|%d|bytes captured]==========\n%u bytes captured\n",count,header->caplen);
         Radio *rad;
         rad = (Radio *)packet;
         // printf("rev : 0x%x\n",rad->hdr_rev);
@@ -134,13 +136,21 @@ int main(int argc, char *argv[])
             // printf("[tag_tpye : %d] [tag_length : %d]\n",becB->tag_number,becB->tag_length);
             // printf("i:%d\n",i);
             // printf("tag num : %d\n",becB->tag_number);
-            if (becB->tag_number == 0) // ssid
+            if (becB->tag_number == 0 && becB->tag_length >0) // ssid
             {
                 // packet++; //여기서부터 길이
                 PtSsid(packet+i);
             }
-            if(becB->tag_number == 3){ // Dskl Parameter
-                PtCh(packet+i);
+            else if(becB->tag_length == 0){
+                printf("=====SSID length is Zero!!=====\n");
+                break;
+            }
+            if(becB->tag_number == 3 && becB->tag_length >0){ // Dskl Parameter
+                PtCh(packet+i); 
+            }
+            else if(becB->tag_length == 0){
+                printf("=====DS length is Zero!!=====\n");
+                break;
             }
             i += becB->tag_length + 2;
             // u_char tag = (u_char*)malloc(sizeof(u_char)*);

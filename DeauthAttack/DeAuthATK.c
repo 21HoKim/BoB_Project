@@ -96,12 +96,14 @@ void Mac_(const char *arr, u_char mac_addr[6]){
     if(strlen(arr)!=17){
         printf("Maclen error!!\n");
     }
-    
     char cpyarr[18];
     memcpy(cpyarr,arr,17);
     for(int i=0; i<6; i++){
-        cpyarr[i*3+2]=='\0';
-        sscanf(cpyarr,"%x",&a);
-            mac_addr[i]==(u_char)a;
+        cpyarr[i*3+2]='\0';
+        sscanf((const char *)&cpyarr[3*i],"%x",&a);
+        printf("%x",a);
+            mac_addr[i]=(u_char)a;
+            
     }
+    printf("\n");
 }

@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
     packet.Dtb.Rcode = 0x0007;
     printf("size : %ld\n",sizeof(packet));
     while(1){
-    if (pcap_sendpacket(pcap, (char *)&packet, sizeof(packet)) != 0)
+    if (pcap_sendpacket(pcap, (char *)&packet, sizeof(packet)-2) != 0)
     {
         fprintf(stderr, "\nError sending the packet: %s\n", pcap_geterr(pcap));
         return -1;

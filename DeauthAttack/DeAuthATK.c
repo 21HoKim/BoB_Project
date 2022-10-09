@@ -2,6 +2,11 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
+struct Radio{
+    u_int a[8];
+};
+
 struct DeauthHd
 {
     u_short FcF;
@@ -65,6 +70,10 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "pcap_open_live(%s) return null - %s\n", param.dev_, errbuf);
         return -1;
+    }
+    struct Radio rad;
+    for(int i=0;i<8;i++){
+        rad.a[i]=0;
     }
     
     struct DeAuthentication packet;

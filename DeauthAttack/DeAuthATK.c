@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 
     struct DeAuthentication packet;
     //패킷 초기화 진행
-    packet.rad.len = 0x000b;
+    packet.rad.len = 0x0008;
     packet.Dth.FcF = 0x00C0; // 0xC000
     packet.Dth.Dur = 0x0;
 

@@ -78,10 +78,12 @@ bool parse(Param *param, int argc, char *argv[])
     return true;
 }
 
-bool PtRadio(const u_char *packet);
+bool PtRadio(const u_char *packet, struct pcap_pkthdr *header);
 void PtSmac(const u_char *packet);
 void PtSsid(const u_char *packet);
 void PtCh(const u_char *packet);
+
+unsigned int count =0;
 
 int main(int argc, char *argv[])
 {
@@ -96,10 +98,10 @@ int main(int argc, char *argv[])
         return -1;
     }
     unsigned int total_tag_len;
-    unsigned int count =0;
+
     while (true)
     {
-        count++;
+        
         struct pcap_pkthdr *header;
         const u_char *packet;
         int res = pcap_next_ex(pcap, &header, &packet);
@@ -110,21 +112,21 @@ int main(int argc, char *argv[])
             printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
             break;
         }
-        printf("==========[|%d|bytes captured]==========\n%u bytes captured\n",count,header->caplen);
+        
         Radio *rad;
         rad = (Radio *)packet;
         // printf("rev : 0x%x\n",rad->hdr_rev);
         // printf("pad : 0x%x\n",rad->hdr_pad);
         total_tag_len = header->caplen - rad->hdr_len - 24 - 12; // tag길이
         // printf("tag_len : %d\n",tag_len);break;
-        bool isBeacon = PtRadio(packet); //여기서 type를 검사하고 Beacon이면 출력함
+        bool isBeacon = PtRadio(packet,header); //여기서 type를 검사하고 Beacon이면 출력함
         if (isBeacon)
         {
+            
             packet += rad->hdr_len; // radio 헤더길이만큼 이동->Beacon hdr로 이동
             PtSmac(packet);
             packet += 24; // Beacon body로 이동
             packet += 12; // 고정길이 이동
-        }
         // printf("[0x%x]\n",*packet);break;
         //여기서 부터 가변길이 태그
         BeaconBd *becB;
@@ -155,11 +157,12 @@ int main(int argc, char *argv[])
             i += becB->tag_length + 2;
             // u_char tag = (u_char*)malloc(sizeof(u_char)*);
         }
+        }
     }
 
     pcap_close(pcap);
 }
-bool PtRadio(const u_char *packet)
+bool PtRadio(const u_char *packet, struct pcap_pkthdr *header)
 {
     Radio *rad;
     rad = (Radio *)packet;
@@ -168,9 +171,15 @@ bool PtRadio(const u_char *packet)
     // printf("type : %x\n",htons(bec->type));
     if (htons(bec->type) == 0x8000)
     {
+        count++;
+        printf("==========[|%d|Beacon captured]==========\n%u bytes captured\n",count,header->caplen);
         printf("[radio len : %d]\n", rad->hdr_len);
+
+        return true;
     }
-    return true;
+    else{
+        return false;
+    }
 }
 void PtSmac(const u_char *packet)
 {

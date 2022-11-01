@@ -1,0 +1,10 @@
+
+*.o
+*.user
+*.vscode
+beacon_parse
+.vscode
+.Vscode
+CSA_detector
+token
+decrypt

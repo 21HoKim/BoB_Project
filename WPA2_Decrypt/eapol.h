@@ -12,6 +12,8 @@
 #define MAC_LEN 6
 #endif
 
+bool PMF = false;
+
 typedef struct Radiotap_hdr
 {
     u_char hdr_rev;          // Header revision
@@ -38,9 +40,9 @@ typedef struct QoS_Data
 
     u_short Duration;
 
-    u_char Src_mae[MAC_LEN];
-    u_char Des_mae[MAC_LEN];
-    u_char Bssid[MAC_LEN];
+    unsigned char Src_mac[MAC_LEN];
+    unsigned char Des_mac[MAC_LEN];
+    unsigned char Bssid[MAC_LEN];
 
     u_char Fragment_number : 4;
     u_short Sequence_number : 12;
@@ -72,16 +74,52 @@ typedef struct Logical_Link_Control
     u_short Type;
 } __attribute__((packed)) LLC;
 
-typedef struct Dot1X_authentication
+typedef struct Dot1Xi_authentication
 {
     u_char Version;
     u_char Type;
     u_short Length;
     u_char Key_desc_type;
-} __attribute__((packed)) Dot_Auth;
+
+    // Key Information (2byte)
+    //u_short Key_info;
+    u_char Key_mic : 1;
+    u_char Secure : 1;
+    u_char Error : 1;
+    u_char Request : 1;
+    u_char Encrypted_keydata : 1;
+    u_char SMK_Message : 1;
+    u_char NULLpadding : 2;
+
+    u_char Key_desc_version : 3;
+    u_char Key_type : 1;
+    u_char Key_index : 2;
+    u_char Install : 1;
+    u_char Key_ack : 1;
+
+    u_short Key_length;
+    u_int64_t Replay_counter;
+    u_char WPA_key_nonce[32];
+    u_char Key_iv[16];
+    u_char WPA_key_rsc[8];
+    u_char WPA_key_id[8];
+    u_char WPA_key_mic[16];
+    u_short WPA_key_data;
+    
+} __attribute__((packed)) Doti_Auth;
+
+typedef struct EAPOLpacket
+{
+    QoS qos;
+    LLC llc;
+    Doti_Auth auth;
+} __attribute__((packed)) Eapol;
 
 bool IsEAPOL(const u_char *packet);
-const u_char* JumpRadio(const u_char *packet);
+const u_char *JumpRadio(const u_char *packet);
 void PtData(const u_char *packet, u_char caplen);
-void CapturePacket(const unsigned char *Interface);
+void CapturePacket(const unsigned char *Interface,const unsigned char *ssid,const unsigned char *passwd);
+int NumEAPOL(const u_char *packet);
+void GetAnonce(const u_char *packet, struct WPA_ST_info *st_cur);
+void GetSnonce(const u_char *packet, struct WPA_ST_info *st_cur);
 #endif

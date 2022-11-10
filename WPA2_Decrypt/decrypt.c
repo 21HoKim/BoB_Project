@@ -1,134 +1,136 @@
-#include <stdio.h>
+#ifndef PCAP_H
+#define PCAP_H
 #include <pcap.h>
+#endif
 
+#ifndef STR_H
+#define STR_H
+#include <string.h>
+#endif
 
-#include <stdbool.h>
+#ifndef STLIB_H
+#define STLIB_H
 #include <stdlib.h>
+#endif
+
+#ifndef EVP_H
+#define EVP_H
+#include <openssl/evp.h>
+#endif
+
+#ifndef SHA_H
+#define SHA_H
+#include <openssl/sha.h>
+#endif
+
+#include <openssl/hmac.h>
+
 #include "decrypt.h"
-#include "eapol.h"
 
-void usage()
+
+unsigned char opad[64] = {
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c, 0x5c,
+    0x5c, 0x5c, 0x5c, 0x5c};
+
+unsigned char ipad[64] = {
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
+    0x36, 0x36, 0x36, 0x36};
+
+void GetPTK_noPMF(struct WPA_ST_info *st_cur, WPA2noPMF_info *wpa2_noPMF_info)
 {
-    printf("syntax: decrypt <interface>\n");
-    printf("sample: decrypt wlan0\n");
+
+    // unsigned char PTK[64];
+
+    // unsigned char *input = malloc(sizeof(unsigned char) * (32 + 32 + 32 + 6 + 6));
+    // memcpy(input, wpa2_noPMF_info->PSK, 32);
+    // memcpy(input + 32, wpa2_noPMF_info->Anonce, 32);
+    // memcpy(input + 32 + 32, wpa2_noPMF_info->Snonce, 32);
+    // memcpy(input + 32 + 32 + 32, wpa2_noPMF_info->AP_mac, 6);
+    // memcpy(input + 32 + 32 + 32 + 6, wpa2_noPMF_info->STA_mac, 6);
+
+    // printf(" PTK : ");
+    // for(int i=0;i<32+32+6+6+256;i++){
+    //     printf("%x",*(input+i));
+    //     if(i==255 || i==255+32 || i==255+64 || i==255+64+6 || i==255+64+12){
+    //         puts("");
+    //     }
+    // }
+    
+
+
+    // memcpy(wpa2_noPMF_info->KEK, PTK, 16);
+    // memcpy(wpa2_noPMF_info->KCK, PTK + 16, 16);
+    // memcpy(wpa2_noPMF_info->TK, PTK + 32, 16);
+    // memcpy(wpa2_noPMF_info->MIC_Tx, PTK + 48, 8);
+    // memcpy(wpa2_noPMF_info->MIC_Rx, PTK + 56, 8);
+    // free(input);
+    memset(st_cur,0,sizeof(struct WPA_ST_info));
+
+    memcpy(st_cur->stmac,wpa2_noPMF_info->STA_mac,6);
+    memcpy(st_cur->bssid,wpa2_noPMF_info->AP_mac,6);
+
+    memcpy(st_cur->anonce,wpa2_noPMF_info->Anonce,32);
+    memcpy(st_cur->snonce,wpa2_noPMF_info->Snonce,32);
+
+    if(!calc_ptk(st_cur,wpa2_noPMF_info->PSK)){
+        fprintf(stderr,"MIC check failde\n");
+        exit(-1);
+    }
+    printf("PTK : ");
+    for(int i=0;i<80;i++){
+        printf("%x",st_cur->ptk[i]);
+    }
+    puts("");
+
+
+}
+void GetPSK_noPMF(const unsigned char *passwd, const unsigned char *ssid, WPA2noPMF_info *wpa2_noPMF_info)
+{
+    PKCS5_PBKDF2_HMAC_SHA1(passwd, -1, ssid, strlen(ssid), 4096, 32, wpa2_noPMF_info->PSK);
+    // for(int i=0;i<256;i++){printf("%x",wpa2_noPMF_info->PSK[i]);}
 }
 
-typedef struct
-{
-    char *dev_;
-} Param;
-
-Param param = {
-    .dev_ = NULL};
-
-bool parse(Param *param, int argc, char *argv[])
-{
-    if (argc != 2)
-    {
-        usage();
-        return false;
-    }
-    param->dev_ = argv[1];
-    return true;
-}
-
-void PtData(const u_char *packet, u_char caplen)
-{
-    for (int i = 0; i < caplen; i++)
-    {
-        if (i % 8 == 0 && i != 0 && i % 16 != 0)
-        {
-            printf("| ");
-        }
-        if (i % 16 == 0 && i != 0)
-        {
-            printf("\n");
-        }
-        *(packet + i) < 16 ? printf("0%x ", *(packet + i)) : printf("%x ", *(packet + i));
-    }
-    printf("\n");
+void GetPMK(WPA2noPMF_info *wpa2_noPMF_info, unsigned char *PMK){
 }
 
 
-
-bool IsEAPOL(const u_char *packet)
+void Pad(const unsigned char *key, size_t key_len, unsigned char *out)
 {
-    packet=JumpRadio(packet);
-    QoS *qos = (QoS *)packet;
-    //printf("Type : %x Subtype : %x Version : %x\n", qos->Type, qos->Subtype,qos->Version);
-    if (qos->Type == 2 && qos->Subtype == 8)
-    {
-        if (qos->Protected_flag == 0)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    return false;
+    memcpy(out,key,key_len);
+    memcpy(out+key_len,0,64-key_len);
 }
 
-const u_char* JumpRadio(const u_char *packet)
+void HMAC_sha1(const unsigned char *key, size_t key_len, const unsigned char *message, unsigned char *out)
 {
-    //u_char *packet_2=packet;
-    if (packet == NULL)
+    unsigned char key_[64];
+    if (key_len > 64)
     {
-        printf("packet is NULL!!!\n");
-        exit(1);
+        SHA1(key, 64, key_);
     }
-    Radio *rad = (Radio *)packet;
-
-    return packet+(rad->hdr_len);
-}
-
-void CapturePacket(const unsigned char *Interface)
-{
-    setbuf(stdin, NULL);
-    setbuf(stdout, NULL);
-    setbuf(stderr, NULL);
-
-    char errbuf[PCAP_ERRBUF_SIZE];
-    pcap_t *pcap = pcap_open_live(param.dev_, BUFSIZ, 1, 1000, errbuf);
-    if (pcap == NULL)
+    if (key_len < 64)
     {
-        fprintf(stderr, "pcap_open_live(%s) return null - %s\n", param.dev_, errbuf);
-        exit(1);
+        Pad(key, key_len ,key_);
     }
+    unsigned char o_key_pad[64]; for(int i=0;i<64;i++){o_key_pad[i]^=opad[i];}
+    unsigned char i_key_pad[64]; for(int i=0;i<64;i++){i_key_pad[i]^=ipad[i];}
 
-    while (true)
-    {
-        struct pcap_pkthdr *header;
-        const u_char *packet;
-        int res = pcap_next_ex(pcap, &header, &packet);
-        if (res == 0)
-            continue;
-        if (res == PCAP_ERROR || res == PCAP_ERROR_BREAK)
-        {
-            printf("pcap_next_ex return %d(%s)\n", res, pcap_geterr(pcap));
-            break;
-        }
-        Radio *rad;
-        rad = (Radio *)packet;
-        //PtData(packet,header->caplen);
-        if (IsEAPOL(packet))
-        {
-            printf("EAPOL Capture!!!\n");
-        }
-    }
-    pcap_close(pcap);
-}
-
-int main(int argc, char *argv[])
-{
-
-    unsigned char *Interface;
-
-    if (!parse(&param, argc, argv))
-        return -1;
-    Interface=argv[1];
-    CapturePacket(Interface);
-
-    return 0;
+    unsigned char out1[128];
+    unsigned char out2[64];
+    memcpy(out1,i_key_pad,64);
+    memcpy(out1+64,message,64);
+    SHA1(out1,64,out2);
+    memcpy(out1,o_key_pad,64);
+    memcpy(out1+64,out2,64);
+    SHA1(out1,64,out2);
+    memcpy(out,out1,64);
 }

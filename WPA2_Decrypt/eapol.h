@@ -120,6 +120,6 @@ const u_char *JumpRadio(const u_char *packet);
 void PtData(const u_char *packet, u_char caplen);
 void CapturePacket(const unsigned char *Interface,const unsigned char *ssid,const unsigned char *passwd);
 int NumEAPOL(const u_char *packet);
-void GetAnonce(const u_char *packet, struct WPA_ST_info *st_cur);
-void GetSnonce(const u_char *packet, struct WPA_ST_info *st_cur);
+void GetAnonce(const u_char *packet, struct WPA_ST_info **st_cur);
+void GetSnonce(const u_char *packet, struct WPA_ST_info **st_cur);
 #endif

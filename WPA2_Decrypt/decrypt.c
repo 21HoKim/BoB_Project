@@ -75,7 +75,6 @@ void GetPTK_noPMF(struct WPA_ST_info *st_cur, WPA2noPMF_info *wpa2_noPMF_info)
     // memcpy(wpa2_noPMF_info->MIC_Rx, PTK + 56, 8);
     // free(input);
     memset(st_cur,0,sizeof(struct WPA_ST_info));
-
     memcpy(st_cur->stmac,wpa2_noPMF_info->STA_mac,6);
     memcpy(st_cur->bssid,wpa2_noPMF_info->AP_mac,6);
 
@@ -97,6 +96,7 @@ void GetPTK_noPMF(struct WPA_ST_info *st_cur, WPA2noPMF_info *wpa2_noPMF_info)
 void GetPSK_noPMF(const unsigned char *passwd, const unsigned char *ssid, WPA2noPMF_info *wpa2_noPMF_info)
 {
     PKCS5_PBKDF2_HMAC_SHA1(passwd, -1, ssid, strlen(ssid), 4096, 32, wpa2_noPMF_info->PSK);
+    for(int i=0;i<32;i++){printf("%x",wpa2_noPMF_info->PSK[i]);}puts("");
     // for(int i=0;i<256;i++){printf("%x",wpa2_noPMF_info->PSK[i]);}
 }
 

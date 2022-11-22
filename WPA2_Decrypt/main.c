@@ -14,10 +14,13 @@
 #include "crypto.h"
 #define WPA2_NONCE_LEN 32
 #define PSK_LEN 256
+
+#include "channel_hopper.h"
+
 void usage()
 {
-    printf("syntax: decrypt <interface> <SSID> <PASSWD>\n");
-    printf("sample: decrypt wlan0 iptime 12345678\n");
+    printf("syntax: decrypt <interface> <SSID> <PASSWD> <Ch>\n");
+    printf("sample: decrypt wlan0 iptime 12345678 161\n");
 }
 
 typedef struct
@@ -30,7 +33,7 @@ Param param = {
 
 bool parse(Param *param, int argc, char *argv[])
 {
-    if (argc != 4)
+    if (argc != 5)
     {
         usage();
         return false;
@@ -143,27 +146,27 @@ int NumEAPOL(const u_char *packet)
     }
 }
 
-void GetAnonce(const u_char *packet, struct WPA_ST_info *st_cur)
+void GetAnonce(const u_char *packet, struct WPA_ST_info **st_cur)
 {
-    packet = JumpRadio(packet);
-    Eapol *eapol = (Eapol *)packet;
-    memcpy(st_cur->anonce, (unsigned char *)(eapol->auth.WPA_key_nonce), WPA2_NONCE_LEN);
-    memcpy(st_cur->bssid, eapol->qos.Src_mac, 6);
-    memcpy(st_cur->stmac, eapol->qos.Des_mac, 6);
+    const u_char *packet_ = JumpRadio(packet);
+    Eapol *eapol = (Eapol *)packet_;
+    memcpy((*st_cur)->anonce,eapol->auth.WPA_key_nonce, WPA2_NONCE_LEN);
+    memcpy((*st_cur)->bssid, eapol->qos.Src_mac, 6);
+    //for(int i=0;i<6;i++){printf("%02x",(*st_cur)->bssid[i]);}puts("!");
+    memcpy((*st_cur)->stmac, eapol->qos.Des_mac, 6);
+    // puts("[stmac!!]");for(int i=0;i<6;i++){printf("%x",(*st_cur)->stmac[i]);}puts("");
 }
-void GetSnonce(const u_char *packet, struct WPA_ST_info *st_cur)
+void GetSnonce(const u_char *packet, struct WPA_ST_info **st_cur)
 {
-    packet = JumpRadio(packet);
-    Eapol *eapol = (Eapol *)packet;
+    const u_char *packet_ = JumpRadio(packet);
+    Eapol *eapol = (Eapol *)packet_;
+    memcpy((*st_cur)->snonce, eapol->auth.WPA_key_nonce, WPA2_NONCE_LEN);
+    (*st_cur)->eapol_size=(unsigned int)htons(eapol->auth.Length)+4;
+    //printf("eapol_size : %d",(*st_cur)->eapol_size);puts("");
+    memcpy((*st_cur)->eapol,(packet_+26+8),(*st_cur)->eapol_size);
+    memcpy((*st_cur)->keymic,eapol->auth.WPA_key_mic,16);
 
-    memcpy(st_cur->snonce, eapol->auth.WPA_key_nonce, WPA2_NONCE_LEN);
-    st_cur->eapol_size=(unsigned int)htons(eapol->auth.Length);
-    for(int i=0;i<htons(eapol->auth.Length); i++){
-    memcpy((st_cur->eapol)+i,(packet+i),1);
-    }
-    memcpy(st_cur->keymic,eapol->auth.WPA_key_mic,16);
-    memcpy(st_cur->eapol+81,0,16);
-    st_cur->keyver=eapol->auth.Key_desc_version;
+    (*st_cur)->keyver=eapol->auth.Key_desc_version;
 }
 
 void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, const unsigned char *passwd)
@@ -201,12 +204,16 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
             {
             case 1:
                 
-                GetAnonce(packet, st_cur);
+                GetAnonce(packet, &st_cur);
+                puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
+                //puts("stmac");for(int i=0;i<6;i++){printf("%x",st_cur->stmac[i]);}puts("");
                 eapolcount+=1;
                 break;
             case 2:
                 
-                GetSnonce(packet, st_cur);
+                GetSnonce(packet, &st_cur);
+                puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
+                //puts("stmac");for(int i=0;i<6;i++){printf("%x",st_cur->stmac[i]);}puts("");
                 eapolcount+=3;
                 break;
             case 3:
@@ -219,10 +226,17 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
                 break;
             }
         }
-
         if (eapolcount == 16)
         {
+            //puts("bssid");for(int i=0;i<6;i++){printf("%02x",st_cur->bssid[i]);}puts("");
+
+            puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
+            puts("bssid");for(int i=0;i<6;i++){printf("%02x",st_cur->bssid[i]);}puts("");
+            puts("anonce");for(int i=0;i<32;i++){printf("%02x",st_cur->anonce[i]);}puts("");
+            puts("snonce");for(int i=0;i<32;i++){printf("%02x",st_cur->snonce[i]);}puts("");
+            puts("mic");for(int i=0;i<20;i++){printf("%02x",st_cur->keymic[i]);}puts("");
             GetPSK_noPMF(passwd, ssid, &wpa2_noPMF_info);
+            
             GetPTK_noPMF(st_cur,&wpa2_noPMF_info);
             eapolcount = 0;
         }
@@ -238,11 +252,16 @@ int main(int argc, char *argv[])
     unsigned char *Interface;
     unsigned char *Ssid;
     unsigned char *Passwd;
+    unsigned char *Ch;
     if (!parse(&param, argc, argv))
         return -1;
     Interface = argv[1];
     Ssid = argv[2];
     Passwd = argv[3];
+    Ch = argv[4];
+    
+    channel_hopping(Interface,atoi(Ch));
+
     CapturePacket(Interface, Ssid, Passwd);
 
     return 0;

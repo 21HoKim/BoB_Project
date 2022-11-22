@@ -523,7 +523,8 @@ int calc_ptk(struct WPA_ST_info * wpa, unsigned char pmk[static 32])
 	unsigned char mic[20];
 
 	memcpy(pke, "Pairwise key expansion", 23);
-
+	printf("stmac : ");for(int i=0;i<6;i++){printf("%x:",wpa->stmac[i]);}puts("");
+	printf("bssid : ");for(int i=0;i<6;i++){printf("%x:",wpa->bssid[i]);}puts("");
 	if (memcmp(wpa->stmac, wpa->bssid, 6) < 0)
 	{
 		memcpy(pke + 23, wpa->stmac, 6);
@@ -535,6 +536,9 @@ int calc_ptk(struct WPA_ST_info * wpa, unsigned char pmk[static 32])
 		memcpy(pke + 29, wpa->stmac, 6);
 	}
 
+
+	printf("snonce : ");for(int i=0;i<32;i++){printf("%x",wpa->snonce[i]);}puts("");
+	printf("anonce : ");for(int i=0;i<32;i++){printf("%x",wpa->anonce[i]);}puts("");
 	if (memcmp(wpa->snonce, wpa->anonce, 32) < 0)
 	{
 		memcpy(pke + 35, wpa->snonce, 32);

@@ -523,8 +523,8 @@ int calc_ptk(struct WPA_ST_info * wpa, unsigned char pmk[static 32])
 	unsigned char mic[20];
 
 	memcpy(pke, "Pairwise key expansion", 23);
-	printf("stmac : ");for(int i=0;i<6;i++){printf("%x:",wpa->stmac[i]);}puts("");
-	printf("bssid : ");for(int i=0;i<6;i++){printf("%x:",wpa->bssid[i]);}puts("");
+	//printf("stmac : ");for(int i=0;i<6;i++){printf("%x:",wpa->stmac[i]);}puts("");
+	//printf("bssid : ");for(int i=0;i<6;i++){printf("%x:",wpa->bssid[i]);}puts("");
 	if (memcmp(wpa->stmac, wpa->bssid, 6) < 0)
 	{
 		memcpy(pke + 23, wpa->stmac, 6);
@@ -537,8 +537,8 @@ int calc_ptk(struct WPA_ST_info * wpa, unsigned char pmk[static 32])
 	}
 
 
-	printf("snonce : ");for(int i=0;i<32;i++){printf("%x",wpa->snonce[i]);}puts("");
-	printf("anonce : ");for(int i=0;i<32;i++){printf("%x",wpa->anonce[i]);}puts("");
+	printf("snonce : ");for(int i=0;i<32;i++){printf("%02x",wpa->snonce[i]);}puts("");
+	printf("anonce : ");for(int i=0;i<32;i++){printf("%02x",wpa->anonce[i]);}puts("");
 	if (memcmp(wpa->snonce, wpa->anonce, 32) < 0)
 	{
 		memcpy(pke + 35, wpa->snonce, 32);
@@ -578,12 +578,18 @@ int calc_ptk(struct WPA_ST_info * wpa, unsigned char pmk[static 32])
 	puts("");
 
 
+
 	/* check the EAPOL frame MIC */
 
 	if ((wpa->keyver & 0x07) == 1)
 		MAC_HMAC_MD5(16, wpa->ptk, wpa->eapol_size, wpa->eapol, mic);
 	else
 		MAC_HMAC_SHA1(16, wpa->ptk, wpa->eapol_size, wpa->eapol, mic);
+		puts("[PTK]");
+		for(int i=0;i<80;i++){
+		printf("%02x",wpa->ptk[i]);
+		}
+		puts("");
 
 	return (memcmp(mic, wpa->keymic, 16) == 0); //-V512
 }

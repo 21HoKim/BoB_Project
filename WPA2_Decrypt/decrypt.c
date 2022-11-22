@@ -46,7 +46,7 @@ unsigned char ipad[64] = {
     0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
     0x36, 0x36, 0x36, 0x36};
 
-void GetPTK_noPMF(struct WPA_ST_info *st_cur, WPA2noPMF_info *wpa2_noPMF_info)
+void GetPTK_noPMF(struct WPA_ST_info **st_cur)
 {
 
     // unsigned char PTK[64];
@@ -69,25 +69,21 @@ void GetPTK_noPMF(struct WPA_ST_info *st_cur, WPA2noPMF_info *wpa2_noPMF_info)
 
 
     // memcpy(wpa2_noPMF_info->KEK, PTK, 16);
-    // memcpy(wpa2_noPMF_info->KCK, PTK + 16, 16);
-    // memcpy(wpa2_noPMF_info->TK, PTK + 32, 16);
-    // memcpy(wpa2_noPMF_info->MIC_Tx, PTK + 48, 8);
-    // memcpy(wpa2_noPMF_info->MIC_Rx, PTK + 56, 8);
+    // memcpy(wpa2_noPMF_infGetPTK_noPMFfo->MIC_Rx, PTK + 56, 8);
     // free(input);
-    memset(st_cur,0,sizeof(struct WPA_ST_info));
-    memcpy(st_cur->stmac,wpa2_noPMF_info->STA_mac,6);
-    memcpy(st_cur->bssid,wpa2_noPMF_info->AP_mac,6);
+    
 
-    memcpy(st_cur->anonce,wpa2_noPMF_info->Anonce,32);
-    memcpy(st_cur->snonce,wpa2_noPMF_info->Snonce,32);
 
-    if(!calc_ptk(st_cur,wpa2_noPMF_info->PSK)){
+    printf("bssid : ");for(int i=0;i<6;i++){printf("%02x",(*st_cur)->bssid[i]);}puts("");
+
+
+    if(!calc_ptk((*st_cur),(*st_cur)->ptk)){
         fprintf(stderr,"MIC check failde\n");
         exit(-1);
     }
     printf("PTK : ");
     for(int i=0;i<80;i++){
-        printf("%x",st_cur->ptk[i]);
+        printf("%x",(*st_cur)->ptk[i]);
     }
     puts("");
 
@@ -96,7 +92,7 @@ void GetPTK_noPMF(struct WPA_ST_info *st_cur, WPA2noPMF_info *wpa2_noPMF_info)
 void GetPSK_noPMF(const unsigned char *passwd, const unsigned char *ssid, WPA2noPMF_info *wpa2_noPMF_info)
 {
     PKCS5_PBKDF2_HMAC_SHA1(passwd, -1, ssid, strlen(ssid), 4096, 32, wpa2_noPMF_info->PSK);
-    for(int i=0;i<32;i++){printf("%x",wpa2_noPMF_info->PSK[i]);}puts("");
+    printf("PSK : ");for(int i=0;i<32;i++){printf("%x",wpa2_noPMF_info->PSK[i]);}puts("");
     // for(int i=0;i<256;i++){printf("%x",wpa2_noPMF_info->PSK[i]);}
 }
 

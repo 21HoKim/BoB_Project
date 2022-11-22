@@ -184,6 +184,7 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
     }
     int eapolcount = 0;
     struct WPA_ST_info *st_cur = (struct WPA_ST_info*)malloc(sizeof(struct WPA_ST_info));
+    memset(st_cur,0,sizeof(struct WPA_ST_info));
     while (true)
     {
         WPA2noPMF_info wpa2_noPMF_info;
@@ -237,7 +238,7 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
             // puts("mic");for(int i=0;i<20;i++){printf("%02x",st_cur->keymic[i]);}puts("");
             GetPSK_noPMF(passwd, ssid, &wpa2_noPMF_info);
             
-            GetPTK_noPMF(st_cur,&wpa2_noPMF_info);
+            GetPTK_noPMF(&st_cur);
             eapolcount = 0;
         }
     }

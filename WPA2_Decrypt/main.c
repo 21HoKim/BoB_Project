@@ -183,9 +183,9 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
         exit(1);
     }
     int eapolcount = 0;
+    struct WPA_ST_info *st_cur = (struct WPA_ST_info*)malloc(sizeof(struct WPA_ST_info));
     while (true)
     {
-        struct WPA_ST_info *st_cur = (struct WPA_ST_info*)malloc(sizeof(struct WPA_ST_info));
         WPA2noPMF_info wpa2_noPMF_info;
         struct pcap_pkthdr *header;
         const u_char *packet;
@@ -205,14 +205,14 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
             case 1:
                 
                 GetAnonce(packet, &st_cur);
-                puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
+                //puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
                 //puts("stmac");for(int i=0;i<6;i++){printf("%x",st_cur->stmac[i]);}puts("");
                 eapolcount+=1;
                 break;
             case 2:
                 
                 GetSnonce(packet, &st_cur);
-                puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
+                //puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
                 //puts("stmac");for(int i=0;i<6;i++){printf("%x",st_cur->stmac[i]);}puts("");
                 eapolcount+=3;
                 break;
@@ -230,19 +230,19 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
         {
             //puts("bssid");for(int i=0;i<6;i++){printf("%02x",st_cur->bssid[i]);}puts("");
 
-            puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
-            puts("bssid");for(int i=0;i<6;i++){printf("%02x",st_cur->bssid[i]);}puts("");
-            puts("anonce");for(int i=0;i<32;i++){printf("%02x",st_cur->anonce[i]);}puts("");
-            puts("snonce");for(int i=0;i<32;i++){printf("%02x",st_cur->snonce[i]);}puts("");
-            puts("mic");for(int i=0;i<20;i++){printf("%02x",st_cur->keymic[i]);}puts("");
+            // puts("fuck stmac");for(int i=0;i<100;i++){printf("%02x",st_cur->stmac[i]);}puts("");
+            // puts("bssid");for(int i=0;i<6;i++){printf("%02x",st_cur->bssid[i]);}puts("");
+            // puts("anonce");for(int i=0;i<32;i++){printf("%02x",st_cur->anonce[i]);}puts("");
+            // puts("snonce");for(int i=0;i<32;i++){printf("%02x",st_cur->snonce[i]);}puts("");
+            // puts("mic");for(int i=0;i<20;i++){printf("%02x",st_cur->keymic[i]);}puts("");
             GetPSK_noPMF(passwd, ssid, &wpa2_noPMF_info);
             
             GetPTK_noPMF(st_cur,&wpa2_noPMF_info);
             eapolcount = 0;
         }
-        free(st_cur);
     }
 
+    free(st_cur);
     pcap_close(pcap);
 }
 

@@ -20,7 +20,7 @@ typedef struct WPA2noPMF_Information
     unsigned char MIC_Rx[8];
 } WPA2noPMF_info;
 
-void GetPTK_noPMF(struct WPA_ST_info **st_cur);
+void GetPTK_noPMF(struct WPA_ST_info **st_cur, WPA2noPMF_info *wpa2_noPMF_info);
 void GetPSK_noPMF(const unsigned char *passwd, const unsigned char *ssid, WPA2noPMF_info *wpa2_noPMF_info);
 void GetPMK(WPA2noPMF_info *wpa2_noPMF_info, unsigned char *PMK);
 void HMAC_sha1(const unsigned char *key, size_t key_len, const unsigned char *message, unsigned char *out);

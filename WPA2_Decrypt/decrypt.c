@@ -46,7 +46,7 @@ unsigned char ipad[64] = {
     0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36, 0x36,
     0x36, 0x36, 0x36, 0x36};
 
-void GetPTK_noPMF(struct WPA_ST_info **st_cur)
+void GetPTK_noPMF(struct WPA_ST_info **st_cur, WPA2noPMF_info *wpa2_noPMF_info)
 {
 
     // unsigned char PTK[64];
@@ -54,7 +54,7 @@ void GetPTK_noPMF(struct WPA_ST_info **st_cur)
     // unsigned char *input = malloc(sizeof(unsigned char) * (32 + 32 + 32 + 6 + 6));
     // memcpy(input, wpa2_noPMF_info->PSK, 32);
     // memcpy(input + 32, wpa2_noPMF_info->Anonce, 32);
-    // memcpy(input + 32 + 32, wpa2_noPMF_info->Snonce, 32);
+    // memcpy(input + 32 + 32, wpa2_noPMF_info->Snonce, 32);WPA2noPMF_info *wpa2_noPMF_info
     // memcpy(input + 32 + 32 + 32, wpa2_noPMF_info->AP_mac, 6);
     // memcpy(input + 32 + 32 + 32 + 6, wpa2_noPMF_info->STA_mac, 6);
 
@@ -77,9 +77,9 @@ void GetPTK_noPMF(struct WPA_ST_info **st_cur)
     printf("bssid : ");for(int i=0;i<6;i++){printf("%02x",(*st_cur)->bssid[i]);}puts("");
 
 
-    if(!calc_ptk((*st_cur),(*st_cur)->ptk)){
+    if(!calc_ptk((*st_cur),wpa2_noPMF_info->PSK)){
         fprintf(stderr,"MIC check failde\n");
-        exit(-1);
+        //exit(-1);
     }
     printf("PTK : ");
     for(int i=0;i<80;i++){

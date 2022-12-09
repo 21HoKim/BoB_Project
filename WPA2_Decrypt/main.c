@@ -238,8 +238,19 @@ void CapturePacket(const unsigned char *Interface, const unsigned char *ssid, co
             // puts("mic");for(int i=0;i<20;i++){printf("%02x",st_cur->keymic[i]);}puts("");
             GetPSK_noPMF(passwd, ssid, &wpa2_noPMF_info);
             
-            GetPTK_noPMF(&st_cur);
+            GetPTK_noPMF(&st_cur,&wpa2_noPMF_info);
+            memcpy(wpa2_noPMF_info.KCK,st_cur->ptk,16);
+            memcpy(wpa2_noPMF_info.KEK,st_cur->ptk+16,16);
+            memcpy(wpa2_noPMF_info.TK,st_cur->ptk+32,16);
+            puts("[KCK]");
+            for(int i=0;i<16;i++){printf("%02x",wpa2_noPMF_info.KCK[i]);}puts("");
+            puts("[KEK]");
+            for(int i=0;i<16;i++){printf("%02x",wpa2_noPMF_info.KEK[i]);}puts("");
+            puts("[TK]");
+            for(int i=0;i<16;i++){printf("%02x",wpa2_noPMF_info.TK[i]);}puts("");
+
             eapolcount = 0;
+            
         }
     }
 
